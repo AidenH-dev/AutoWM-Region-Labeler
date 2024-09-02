@@ -41,6 +41,8 @@ atlas_data = atlas_img.get_fdata()
 
 ### 2. Define the Look-Up Table (LUT)
 
+**_`Using JHU-WhiteMatter-labels-1mm.txt as current label map`_**
+
 The LUT is manually created to map the atlas labels to corresponding anatomical names:
 
 ```python
