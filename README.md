@@ -130,7 +130,10 @@ python3 jhu_atlas_lookup_cluster.py
 
 - **3D Visualization**: A 3D scatter plot showing the distribution of points in the cluster, color-coded by region.
 
-<img width="727" alt="example_3d_plot" src="https://github.com/user-attachments/assets/76e7a2f4-c60d-4053-b3d6-6b3183868ea6">
+<div align="center">
+  <img width="727" alt="example_3d_plot" src="https://github.com/user-attachments/assets/76e7a2f4-c60d-4053-b3d6-6b3183868ea6">
+</div>
+
 
 ## Notes
 
