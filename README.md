@@ -1,6 +1,3 @@
-Here is the updated README with a section for including an example image of the 3D plot:
-
-```markdown
 # AutoWM-Region-Labeler-Cluster
 Automate the region labeling for characterizing and comparing brain activations in white matter and gray matter during different cognitive states.
 
@@ -145,4 +142,3 @@ This script is open-source and available for use under the [MIT License](LICENSE
 ## Contributing
 
 Contributions are welcome! If you have any improvements or suggestions, feel free to open an issue or submit a pull request.
-```
