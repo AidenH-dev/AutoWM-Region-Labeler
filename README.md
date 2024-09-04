@@ -1,10 +1,10 @@
-Here is the updated README with a section for including an example image of the 3D plot:
+<h1 align="center">
+  Auto White Matter Region Labeler
+</h1>
 
-```markdown
-# AutoWM-Region-Labeler-Cluster
+<p align="center">
 Automate the region labeling for characterizing and comparing brain activations in white matter and gray matter during different cognitive states.
-
-# README
+</p>
 
 ## Overview
 
@@ -28,7 +28,6 @@ pip install nibabel numpy scipy matplotlib
 ## Files
 
 - `JHU-WhiteMatter-labels-1mm.nii.gz`: The NIfTI file containing the JHU White Matter Atlas.
-- `lookup_table.py`: This script defines the LUT and the functions for region identification.
 - `jhu_atlas_lookup_cluster.py`: The main script that includes examples and visualizations.
 
 ## Usage
@@ -120,18 +119,21 @@ python3 jhu_atlas_lookup_cluster.py
 - **Cluster Regions**: A dictionary mapping each identified region to the number of points in that region.
 
 ```bash
-Cluster Regions: {'Anterior_corona_radiata_R': 10, 'Unclassified': 49, 'Genu_of_corpus_callosum': 1}
+> Cluster Regions: {'Anterior_corona_radiata_R': 10, 'Unclassified': 49, 'Genu_of_corpus_callosum': 1}
 ```
 
 - **All Points in Same Region**: A boolean indicating whether all points in the cluster belong to the same region.
 
 ```bash
-All Points in Same Region: True
+> All Points in Same Region: False
 ```
 
 - **3D Visualization**: A 3D scatter plot showing the distribution of points in the cluster, color-coded by region.
 
-![Example 3D Plot](path_to_image/example_3d_plot.png)
+<div align="center">
+  <img width="727" alt="example_3d_plot" src="https://github.com/user-attachments/assets/76e7a2f4-c60d-4053-b3d6-6b3183868ea6">
+</div>
+
 
 ## Notes
 
@@ -145,4 +147,3 @@ This script is open-source and available for use under the [MIT License](LICENSE
 ## Contributing
 
 Contributions are welcome! If you have any improvements or suggestions, feel free to open an issue or submit a pull request.
-```
