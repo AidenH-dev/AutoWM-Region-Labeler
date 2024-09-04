@@ -1,7 +1,10 @@
-# AutoWM-Region-Labeler-Cluster
-Automate the region labeling for characterizing and comparing brain activations in white matter and gray matter during different cognitive states.
+<h1 align="center">
+  Auto White Matter Region Labeler
+</h1>
 
-# README
+<p align="center">
+Automate the region labeling for characterizing and comparing brain activations in white matter and gray matter during different cognitive states.
+</p>
 
 ## Overview
 
