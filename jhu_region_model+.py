@@ -4,6 +4,7 @@ from skimage import measure
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import random
+import pandas as pd
 
 # Look-up table (LUT) for white matter regions, including "Unclassified"
 lut = {
@@ -67,6 +68,8 @@ def load_relevant_regions(file_path, relevant_region_ids, downsample_factor=2):
     selected_colors = []
 
     for region_idx in relevant_region_ids:
+        if region_idx == 0:  # Skip "Unclassified" region for 3D model generation
+            continue
         # Extract relevant regions only
         region_data = np.zeros_like(nii_data)
         region_data[nii_data == region_idx] = 1
@@ -91,20 +94,21 @@ def create_combined_3d_plot(relevant_regions_data, region_colors, mni_coords, at
     fig = plt.figure(figsize=(10, 10))
     ax = fig.add_subplot(111, projection='3d')
 
-    # Plot relevant white matter regions
+    # Plot relevant white matter regions (excluding "Unclassified")
     for i, region_data in enumerate(relevant_regions_data):
         verts, faces, normals, values = measure.marching_cubes(region_data, level=0.5)
         mesh = Poly3DCollection(verts[faces], alpha=0.1, linewidths=0, edgecolors='none')
         mesh.set_facecolor(region_colors[i])
         ax.add_collection3d(mesh)
 
-    # Plot MNI coordinates
+    # Plot MNI coordinates (including "Unclassified" points)
     colors = plt.cm.jet(np.linspace(0, 1, len(relevant_region_ids)))
     region_colors = {region: colors[i] for i, region in enumerate(relevant_region_ids)}
 
     for coord in mni_coords:
         region_name, region_idx = identify_region(coord, atlas_data, lut)
-        ax.scatter(coord[0]//downsample_factor, coord[1]//downsample_factor, coord[2]//downsample_factor, color=region_colors[region_idx], s=50)
+        # Plot all MNI coordinates, including "Unclassified"
+        ax.scatter(coord[0]//downsample_factor, coord[1]//downsample_factor, coord[2]//downsample_factor, color=region_colors.get(region_idx, 'red'), s=50)
 
     # Set labels and axis limits
     ax.set_xlim(0, atlas_data.shape[0] // downsample_factor)
@@ -115,11 +119,20 @@ def create_combined_3d_plot(relevant_regions_data, region_colors, mni_coords, at
     ax.set_zlabel('Z axis')
     ax.view_init(elev=45, azim=45)
 
-    # Add legend with regions
-    handles = [plt.Line2D([0], [0], marker='o', color='w', label=lut[region_id], markersize=10, markerfacecolor=region_colors[region_id]) for region_id in relevant_region_ids]
+    # Add legend with regions (excluding "Unclassified" from the legend)
+    handles = [plt.Line2D([0], [0], marker='o', color='w', label=lut[region_id], markersize=10, markerfacecolor=region_colors[region_id]) for region_id in relevant_region_ids if region_id != 0]
     ax.legend(handles=handles, title="Regions", loc='upper left', bbox_to_anchor=(1.05, 1))
 
     plt.show()
+
+# Step 4: Create a table listing the modeled tracts
+def generate_tracts_table(relevant_region_ids, lut):
+    # Create a dataframe for displaying the table of modeled tracts
+    tracts_info = [(region_id, lut[region_id]) for region_id in relevant_region_ids if region_id != 0]
+    df = pd.DataFrame(tracts_info, columns=["Region ID", "White Matter Tract"])
+    print("Modeled White Matter Tracts:")
+    print(df.to_string(index=False))  # Print the table
+    return df
 
 # Main function
 def main():
@@ -127,21 +140,7 @@ def main():
     downsample_factor = 2  # Downsampling factor to reduce memory usage and complexity
 
     # Example MNI coordinates (replace with actual MNI coordinates)
-    mni_coords = [(69, 161, 73), (70, 161, 74), (68, 160, 72), (71, 162, 75),
-    (72, 163, 76), (67, 159, 71), (73, 164, 77), (66, 158, 70),
-    (74, 165, 78), (65, 157, 69), (75, 166, 79), (64, 156, 68),
-    (76, 167, 80), (63, 155, 67), (77, 168, 81), (62, 154, 66),
-    (78, 169, 82), (61, 153, 65), (79, 170, 83), (60, 152, 64),
-    (80, 171, 84), (59, 151, 63), (81, 172, 85), (58, 150, 62),
-    (82, 173, 86), (57, 149, 61), (83, 174, 87), (56, 148, 60),
-    (84, 175, 88), (55, 147, 59), (85, 176, 89), (54, 146, 58),
-    (86, 177, 90), (53, 145, 57), (87, 178, 91), (52, 144, 56),
-    (88, 179, 92), (51, 143, 55), (89, 180, 93), (50, 142, 54),
-    (90, 181, 94), (49, 141, 53), (91, 182, 95), (48, 140, 52),
-    (92, 183, 96), (47, 139, 51), (93, 184, 97), (46, 138, 50),
-    (94, 185, 98), (45, 137, 49), (95, 186, 99), (44, 136, 48),
-    (96, 187, 100), (43, 135, 47), (97, 188, 101), (42, 134, 46),
-    (98, 189, 102), (41, 133, 45), (99, 190, 103), (81, 154, 73)]  # Add actual MNI points
+    mni_coords = [(107, 89, 37), (2, -6, 6)]  # Add actual MNI points
 
     # Load the atlas data for region identification
     atlas_img = nib.load(file_path)
@@ -153,11 +152,14 @@ def main():
         _, region_id = identify_region(coord, atlas_data, lut)
         relevant_region_ids.add(region_id)
 
-    # Load and extract only the relevant regions, with downsampling for optimization
+    # Load and extract only the relevant regions (excluding "Unclassified" for 3D modeling)
     relevant_regions_data, region_colors, _ = load_relevant_regions(file_path, relevant_region_ids, downsample_factor=downsample_factor)
 
-    # Create the combined plot
+    # Create the combined plot (plotting MNI coordinates including "Unclassified" but skipping 3D model generation for "Unclassified")
     create_combined_3d_plot(relevant_regions_data, region_colors, mni_coords, atlas_data, relevant_region_ids, downsample_factor)
+
+    # Generate and display the table of modeled tracts (excluding "Unclassified")
+    generate_tracts_table(relevant_region_ids, lut)
 
 if __name__ == "__main__":
     main()
