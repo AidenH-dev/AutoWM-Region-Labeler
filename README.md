@@ -25,7 +25,6 @@ pip install nibabel numpy scipy matplotlib
 ## Files
 
 - `JHU-WhiteMatter-labels-1mm.nii.gz`: The NIfTI file containing the JHU White Matter Atlas.
-- `lookup_table.py`: This script defines the LUT and the functions for region identification.
 - `jhu_atlas_lookup_cluster.py`: The main script that includes examples and visualizations.
 
 ## Usage
