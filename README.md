@@ -1,11 +1,14 @@
+Here is the updated README with a section for including an example image of the 3D plot:
+
+```markdown
 # AutoWM-Region-Labeler-Cluster
-automate the region labeling for characterizing and comparing brain activations in white matter and gray matter during different cognitive states
+Automate the region labeling for characterizing and comparing brain activations in white matter and gray matter during different cognitive states.
 
 # README
 
 ## Overview
 
-This script provides tools for identifying and analyzing white matter regions in the brain using the JHU White Matter Atlas. The script loads the JHU White Matter Atlas, defines a Look-Up Table (LUT) mapping atlas labels to anatomical names, and provides functions for identifying specific white matter regions based on voxel coordinates. Additionally, the script can check whether a cluster of points belongs to the same white matter region.
+This script provides tools for identifying and analyzing white matter regions in the brain using the JHU White Matter Atlas. The script loads the JHU White Matter Atlas, defines a Look-Up Table (LUT) mapping atlas labels to anatomical names, and provides functions for identifying specific white matter regions based on voxel coordinates. Additionally, the script can check whether a cluster of points belongs to the same white matter region and visualize the results in 3D.
 
 ## Prerequisites
 
@@ -14,17 +17,19 @@ Before running the script, ensure you have the following Python packages install
 - `nibabel`: For loading neuroimaging data in NIfTI format.
 - `numpy`: For numerical operations.
 - `scipy`: For spatial distance calculations.
+- `matplotlib`: For generating visualizations.
 
 You can install these packages using pip:
 
 ```bash
-pip install nibabel numpy scipy
+pip install nibabel numpy scipy matplotlib
 ```
 
 ## Files
 
 - `JHU-WhiteMatter-labels-1mm.nii.gz`: The NIfTI file containing the JHU White Matter Atlas.
-- `lookup_table.py`: This script that defines the LUT and the functions for region identification.
+- `lookup_table.py`: This script defines the LUT and the functions for region identification.
+- `jhu_atlas_lookup_cluster.py`: The main script that includes examples and visualizations.
 
 ## Usage
 
@@ -40,8 +45,6 @@ atlas_data = atlas_img.get_fdata()
 ```
 
 ### 2. Define the Look-Up Table (LUT)
-
-**_`Using JHU-WhiteMatter-labels-1mm.txt as current label map`_**
 
 The LUT is manually created to map the atlas labels to corresponding anatomical names:
 
@@ -89,9 +92,24 @@ print("Cluster Regions:", cluster_regions)
 print("All Points in Same Region:", all_same_region)
 ```
 
-### 5. Example
+### 5. Visualize Cluster Regions
 
-An example is provided at the end of the script that demonstrates how to use the `identify_region` and `check_cluster_region` functions with a sample cluster of MNI coordinates.
+The script includes a function to visualize the identified regions in 3D:
+
+```python
+def plot_cluster_regions(cluster_coords, cluster_regions, lut):
+    # Function implementation
+```
+
+Example usage:
+
+```python
+plot_cluster_regions(cluster_coords, cluster_regions, lut)
+```
+
+### 6. Example
+
+An example is provided at the end of the script that demonstrates how to use the `identify_region`, `check_cluster_region`, and `plot_cluster_regions` functions with a sample cluster of MNI coordinates.
 
 ```bash
 python3 jhu_atlas_lookup_cluster.py
@@ -100,7 +118,20 @@ python3 jhu_atlas_lookup_cluster.py
 ## Output
 
 - **Cluster Regions**: A dictionary mapping each identified region to the number of points in that region.
+
+```bash
+Cluster Regions: {'Anterior_corona_radiata_R': 10, 'Unclassified': 49, 'Genu_of_corpus_callosum': 1}
+```
+
 - **All Points in Same Region**: A boolean indicating whether all points in the cluster belong to the same region.
+
+```bash
+All Points in Same Region: True
+```
+
+- **3D Visualization**: A 3D scatter plot showing the distribution of points in the cluster, color-coded by region.
+
+![Example 3D Plot](path_to_image/example_3d_plot.png)
 
 ## Notes
 
@@ -114,3 +145,4 @@ This script is open-source and available for use under the [MIT License](LICENSE
 ## Contributing
 
 Contributions are welcome! If you have any improvements or suggestions, feel free to open an issue or submit a pull request.
+```

@@ -1,6 +1,8 @@
 import nibabel as nib
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 # Load the JHU White Matter Atlas
 atlas_img = nib.load('../AutoWM-Region-Labeler/JHU_atlas/JHU-WhiteMatter-labels-1mm.nii.gz')
@@ -128,3 +130,40 @@ cluster_regions, all_same_region = check_cluster_region(cluster_coords, atlas_da
 
 print("Cluster Regions:", cluster_regions)
 print("All Points in Same Region:", all_same_region)
+
+# Visualization
+def plot_cluster_regions(cluster_coords, cluster_regions, lut):
+    """
+    Plot the cluster regions in a 3D scatter plot.
+    
+    :param cluster_coords: List of voxel coordinates [(i, j, k), ...]
+    :param cluster_regions: Dictionary with regions and number of points in each region
+    :param lut: Dictionary mapping atlas labels to anatomical names
+    """
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    
+    # Assign a unique color to each region
+    unique_regions = list(cluster_regions.keys())
+    colors = plt.cm.jet(np.linspace(0, 1, len(unique_regions)))
+    region_colors = {region: colors[i] for i, region in enumerate(unique_regions)}
+    
+    # Plot each point with the color corresponding to its region
+    for idx, voxel_coords in enumerate(cluster_coords):
+        region_name = identify_region(voxel_coords, atlas_data, lut)
+        ax.scatter(voxel_coords[0], voxel_coords[1], voxel_coords[2], color=region_colors[region_name], label=region_name)
+    
+    # Set labels and title
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    ax.set_title('Cluster Regions Visualization')
+    
+    # Create a legend with unique regions
+    handles = [plt.Line2D([0], [0], marker='o', color='w', label=region_name, markersize=10, markerfacecolor=region_colors[region_name]) for region_name in unique_regions]
+    ax.legend(handles=handles, title="Regions", loc='upper left', bbox_to_anchor=(1.05, 1))
+    
+    plt.show()
+
+# Plot the results
+plot_cluster_regions(cluster_coords, cluster_regions, lut)
