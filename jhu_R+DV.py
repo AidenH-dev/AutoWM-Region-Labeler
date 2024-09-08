@@ -83,74 +83,78 @@ lut = {
 
 # Function to shift coordinates
 def shift_coordinates(coords, shift_values=(92, 127, 73)):
-    """
-    This function takes a list of tuples (coordinates) and applies a shift to each coordinate.
-    
-    Parameters:
-    coords (list of tuples): List of (x, y, z) coordinates
-    shift_values (tuple): The shift to apply to each coordinate, default is (x+92, y+127, z+73)
-    
-    Returns:
-    list of tuples: Shifted coordinates
-    """
     shift = np.array(shift_values)
     shifted_coords = [tuple(np.array(coord) + shift) for coord in coords]
     return shifted_coords
 
 # Function to identify the region for given voxel coordinates
 def identify_region(voxel_coords, atlas_data, lut):
-    """
-    Identify the white matter region corresponding to the given voxel coordinates.
-    
-    :param voxel_coords: Tuple of voxel coordinates (i, j, k)
-    :param atlas_data: Numpy array of the atlas data
-    :param lut: Dictionary mapping atlas labels to anatomical names
-    :return: Name of the white matter region
-    """
     label_value = int(atlas_data[tuple(voxel_coords)])
     return lut.get(label_value, "Unclassified")
 
-# Function to calculate the distance between two points
+# Function to calculate the Euclidean distance between two points
 def calculate_distance(coord1, coord2):
-    """
-    Calculate the Euclidean distance between two points.
-    
-    :param coord1: First 3D coordinate
-    :param coord2: Second 3D coordinate
-    :return: Distance as a float
-    """
     return np.linalg.norm(np.array(coord1) - np.array(coord2))
 
-# Function to process coordinates and find regions
+# Function to process coordinates and find regions with distances to the next 3 closest regions
 def process_coordinates(coords, atlas_data, lut):
-    """
-    Process an array of coordinates, identify regions, and calculate distances.
-    
-    :param coords: List of (x, y, z) MNI coordinates
-    :param atlas_data: 3D Nifti data array from the brain atlas
-    :param lut: Dictionary mapping atlas labels to anatomical region names
-    :return: A list of results with original coordinates, region name, and distance
-    """
     shifted_coords = shift_coordinates(coords)
     results = []
+    
+    atlas_shape = atlas_data.shape
+    all_voxels = np.array(np.where(atlas_data != 0)).T  # All non-zero voxels
+    
     for i, coord in enumerate(coords):
         shifted_coord = shifted_coords[i]
-        region_name = identify_region(shifted_coord, atlas_data, lut)
         
-        # Save original MNI coordinates, not the shifted ones
-        result = [*coord, region_name, 0.0]  # Distance is 0.0 if it's in the region
+        # Check if the coordinate falls inside a region
+        region_name = identify_region(shifted_coord, atlas_data, lut)
+        region_distances = {}
+        
+        if region_name != "Unclassified":
+            # If it falls inside a region, set that as region 1 and distance as 0
+            result = [*coord, region_name, 0.0]
+        else:
+            # If unclassified, calculate the distances to other regions
+            result = [*coord, "Unclassified", 0.0]
+        
+        # Iterate through all voxels in the atlas to calculate distances
+        for voxel in all_voxels:
+            current_region = identify_region(voxel, atlas_data, lut)
+            if current_region != "Unclassified" and current_region != region_name:  # Skip unclassified and region 1
+                distance = calculate_distance(shifted_coord, voxel)
+                if current_region in region_distances:
+                    region_distances[current_region].append(distance)
+                else:
+                    region_distances[current_region] = [distance]
+        
+        # For each region, use the minimum distance (closest voxel)
+        min_distances = {region: min(distances) for region, distances in region_distances.items()}
+        
+        # Sort regions by distance
+        sorted_regions = sorted(min_distances.items(), key=lambda item: item[1])
+        
+        # Add the next 3 closest regions to the result
+        for idx in range(3):
+            if idx < len(sorted_regions):
+                region_name, distance = sorted_regions[idx]
+                result.append(region_name)
+                result.append(distance)
+            else:
+                result.append("None")  # If there are fewer than 3 regions
+                result.append("N/A")
+        
         results.append(result)
+    
     return results
 
 # Function to write results to CSV
 def write_to_csv(results, output_filename='output.csv'):
-    """
-    Write the results to a CSV file.
+    headers = ['x', 'y', 'z', 'region 1 name', 'region 1 distance',
+               'region 2 name', 'region 2 distance',
+               'region 3 name', 'region 3 distance',
+               'region 4 name', 'region 4 distance']
     
-    :param results: List of processed results with coordinates, regions, and distances
-    :param output_filename: Name of the CSV output file
-    """
-    headers = ['x', 'y', 'z', 'region 1 name', 'region 1 distance']
     with open(output_filename, 'w', newline='') as csvfile:
         csvwriter = csv.writer(csvfile)
         csvwriter.writerow(headers)
@@ -158,7 +162,8 @@ def write_to_csv(results, output_filename='output.csv'):
             csvwriter.writerow(result)
 
 # Example input MNI coordinates
-mni_coords = [(-21, 34, 3), (-41,34,3)]  # Input coordinates, which should ping inside "Anterior corona radiata R"
+mni_coords = [(12, -91, 11), (27, -88, 20), (15, -86, 5), (-6, -94, 11),    (-8, -90, -1), (-14, -91, 24), (-24, -32, 2), (-9, -28, -2),    (-20, -14, 17), (2, -40, -42), (-6, -40, -44), (26, -61, 56),    (18, -54, 65), (27, -49, 56), (-20, -62, 54), (-20, -61, -26),    (-15, -67, -30), (-15, -73, -36), (21, -61, -26), (28, -52, -31),    (42, -8, 40), (34, -2, 44), (18, -24, 60), (21, 2, 53),    (12, 8, 50), (28, 23, 11), (28, 32, 5), (20, 53, -7),    (-51, 5, -10), (-48, -6, -12), (-32, -1, 46), (56, -18, 0),    (15, -8, 14), (12, -18, 8), (18, 0, 18), (-16, 17, 38),    (-10, 14, 46), (21, 12, 38)]
+
 
 # Process the coordinates and identify regions
 results = process_coordinates(mni_coords, atlas_data, lut)
