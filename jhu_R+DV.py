@@ -19,16 +19,24 @@
 # This implementation uses the JHU White Matter Atlas for region identification and assumes the atlas is pre-loaded with 
 # voxel data. It also assumes that the input coordinates are valid MNI coordinates. The output CSV file can be used for 
 # further analysis or reporting.
+import nibabel as nib  # Importing the nibabel library, which is used for reading and working with neuroimaging data (e.g., NIfTI files).
+import numpy as np  # Importing NumPy for numerical operations, such as working with arrays.
+import csv  # Importing the CSV module to write the results to a CSV file.
 
-import nibabel as nib
-import numpy as np
-import csv
-
-# Load the JHU White Matter Atlas
+# Load the JHU White Matter Atlas NIfTI file.
+# This file contains labeled regions of white matter in the brain, stored as a 3D image.
+# Each voxel in the 3D image has an integer label that corresponds to a specific white matter region.
 atlas_img = nib.load('../AutoWM-Region-Labeler/JHU_atlas/JHU-WhiteMatter-labels-1mm.nii.gz')
+
+# Extract the actual image data from the loaded NIfTI file.
+# This data is stored as a NumPy array, where each element in the array represents a voxel in the brain.
+# The value of each voxel is an integer that corresponds to a specific region in the atlas.
 atlas_data = atlas_img.get_fdata()
 
-# Look-up table (LUT) for white matter regions
+# Look-up table (LUT) for white matter regions.
+# This dictionary maps integer values (from the atlas data) to the corresponding region names.
+# For example, if a voxel has a value of 1 in the atlas, it corresponds to the "Middle_cerebellar_peduncle" region.
+# The value 0 is used for unclassified regions.
 lut = {
     0: "Unclassified",
     1: "Middle_cerebellar_peduncle",
@@ -81,94 +89,137 @@ lut = {
     48: "Tapetum_L"
 }
 
-# Function to shift coordinates
+# Function to shift the input coordinates.
+# MNI coordinates typically need to be shifted to match the coordinate system used by the atlas.
+# The shift_values parameter represents the amount by which the MNI coordinates should be shifted.
+# The function applies this shift to each coordinate.
 def shift_coordinates(coords, shift_values=(92, 127, 73)):
-    shift = np.array(shift_values)
-    shifted_coords = [tuple(np.array(coord) + shift) for coord in coords]
+    shift = np.array(shift_values)  # Convert the shift values into a NumPy array.
+    shifted_coords = [tuple(np.array(coord) + shift) for coord in coords]  # Apply the shift to each coordinate.
     return shifted_coords
 
-# Function to identify the region for given voxel coordinates
+# Function to identify the region corresponding to the given voxel coordinates.
+# The function looks up the voxel value in the atlas (i.e., the white matter region label).
+# It then uses the look-up table (LUT) to convert the voxel value into a human-readable region name.
+# If the voxel value isn't found in the LUT, the region is marked as "Unclassified."
 def identify_region(voxel_coords, atlas_data, lut):
-    label_value = int(atlas_data[tuple(voxel_coords)])
-    return lut.get(label_value, "Unclassified")
+    label_value = int(atlas_data[tuple(voxel_coords)])  # Get the value of the voxel at the given coordinates.
+    return lut.get(label_value, "Unclassified")  # Look up the region name using the LUT.
 
-# Function to calculate the Euclidean distance between two points
+# Function to calculate the Euclidean distance between two 3D coordinates (in voxel space).
+# This is used to measure the distance between the current voxel and other nearby regions.
 def calculate_distance(coord1, coord2):
-    return np.linalg.norm(np.array(coord1) - np.array(coord2))
+    return np.linalg.norm(np.array(coord1) - np.array(coord2))  # Calculate the Euclidean distance.
 
-# Function to process coordinates and find regions with distances to the next 3 closest regions
+# Function to calculate the 3D vector between two points.
+# This vector represents the direction and magnitude from one point (voxel) to another.
+def calculate_vector(coord1, coord2):
+    return np.array(coord2) - np.array(coord1)  # Compute the vector difference between two points.
+# Modify the vector formatting function to use square brackets and remove extra spaces
+def format_vector(vector):
+    # Convert the NumPy array to a string, remove extra spaces, and replace parentheses with square brackets
+    return str(vector.tolist()).replace(" ", "")
+
+# Main function that processes the input MNI coordinates.
+# For each input coordinate, the function shifts the coordinate to match the atlas space,
+# identifies the region it belongs to, and finds the 3 closest regions (if the input is unclassified).
 def process_coordinates(coords, atlas_data, lut):
-    shifted_coords = shift_coordinates(coords)
-    results = []
+    shifted_coords = shift_coordinates(coords)  # First, shift the input coordinates.
+    results = []  # Initialize an empty list to store the results.
     
+    # Get the shape of the atlas data to use for bounds checking.
     atlas_shape = atlas_data.shape
-    all_voxels = np.array(np.where(atlas_data != 0)).T  # All non-zero voxels
     
+    # Find all the voxels in the atlas that have a non-zero value (i.e., all classified voxels).
+    all_voxels = np.array(np.where(atlas_data != 0)).T  # Transpose to get coordinates in (x, y, z) format.
+    
+    # Iterate over the list of input coordinates.
     for i, coord in enumerate(coords):
-        shifted_coord = shifted_coords[i]
+        shifted_coord = shifted_coords[i]  # Get the shifted coordinate for the current point.
         
-        # Check if the coordinate falls inside a region
+        # Check if the coordinate falls inside a specific region in the atlas.
         region_name = identify_region(shifted_coord, atlas_data, lut)
+        
+        # Initialize dictionaries to store distances and vectors to nearby regions.
         region_distances = {}
+        region_vectors = {}
         
+        # Initialize the result for this coordinate.
+        # If the coordinate is classified, the distance to that region is 0, and the vector is [0, 0, 0].
         if region_name != "Unclassified":
-            # If it falls inside a region, set that as region 1 and distance as 0
-            result = [*coord, region_name, 0.0]
+            result = [*coord, region_name, 0.0, "[0,0,0]"]  # Store the classified region info with formatted vector.
         else:
-            # If unclassified, calculate the distances to other regions
-            result = [*coord, "Unclassified", 0.0]
+            result = [*coord, "Unclassified", 0.0, "[0,0,0]"]  # Mark as unclassified.
         
-        # Iterate through all voxels in the atlas to calculate distances
+        # Loop through all classified voxels in the atlas to find the 3 closest regions.
         for voxel in all_voxels:
-            current_region = identify_region(voxel, atlas_data, lut)
-            if current_region != "Unclassified" and current_region != region_name:  # Skip unclassified and region 1
-                distance = calculate_distance(shifted_coord, voxel)
+            current_region = identify_region(voxel, atlas_data, lut)  # Get the region name of the current voxel.
+            
+            # Skip unclassified regions and the region we are currently in.
+            if current_region != "Unclassified" and current_region != region_name:
+                distance = calculate_distance(shifted_coord, voxel)  # Calculate the distance to this voxel.
+                vector = calculate_vector(shifted_coord, voxel)  # Calculate the vector to this voxel.
+                
+                # If this region has already been encountered, keep only the closest voxel.
                 if current_region in region_distances:
-                    region_distances[current_region].append(distance)
+                    if distance < region_distances[current_region]:
+                        region_distances[current_region] = distance
+                        region_vectors[current_region] = format_vector(vector)  # Use formatted vector.
                 else:
-                    region_distances[current_region] = [distance]
+                    # Store the distance and vector for this region.
+                    region_distances[current_region] = distance
+                    region_vectors[current_region] = format_vector(vector)  # Use formatted vector.
         
-        # For each region, use the minimum distance (closest voxel)
-        min_distances = {region: min(distances) for region, distances in region_distances.items()}
+        # Sort the regions by distance (ascending order).
+        sorted_regions = sorted(region_distances.items(), key=lambda item: item[1])
         
-        # Sort regions by distance
-        sorted_regions = sorted(min_distances.items(), key=lambda item: item[1])
-        
-        # Add the next 3 closest regions to the result
+        # Add the next 3 closest regions (by distance) to the result.
         for idx in range(3):
             if idx < len(sorted_regions):
                 region_name, distance = sorted_regions[idx]
+                vector = region_vectors[region_name]
                 result.append(region_name)
                 result.append(distance)
+                result.append(vector)
             else:
-                result.append("None")  # If there are fewer than 3 regions
-                result.append("N/A")
+                result.append("None")  # If there are fewer than 3 nearby regions, append "None".
+                result.append("N/A")  # Append N/A for missing distance and vector.
+                result.append("[N/A]")
         
+        # Append the result for this coordinate to the list of results.
         results.append(result)
     
-    return results
+    return results  # Return the processed results.
 
-# Function to write results to CSV
+
+# Function to write the processed results to a CSV file.
+# This allows us to save the results for later use or analysis.
 def write_to_csv(results, output_filename='output.csv'):
-    headers = ['x', 'y', 'z', 'region 1 name', 'region 1 distance',
-               'region 2 name', 'region 2 distance',
-               'region 3 name', 'region 3 distance',
-               'region 4 name', 'region 4 distance']
+    # Define the headers for the CSV file.
+    headers = ['x', 'y', 'z', 'region 1 name', 'region 1 distance', 'region 1 vector',
+               'region 2 name', 'region 2 distance', 'region 2 vector',
+               'region 3 name', 'region 3 distance', 'region 3 vector',
+               'region 4 name', 'region 4 distance', 'region 4 vector']
     
+    # Open a new CSV file in write mode.
     with open(output_filename, 'w', newline='') as csvfile:
-        csvwriter = csv.writer(csvfile)
-        csvwriter.writerow(headers)
+        csvwriter = csv.writer(csvfile)  # Create a CSV writer object.
+        csvwriter.writerow(headers)  # Write the header row.
+        
+        # Write each result to the CSV file.
         for result in results:
             csvwriter.writerow(result)
 
-# Example input MNI coordinates
-mni_coords = [(12, -91, 11), (27, -88, 20), (15, -86, 5), (-6, -94, 11),    (-8, -90, -1), (-14, -91, 24), (-24, -32, 2), (-9, -28, -2),    (-20, -14, 17), (2, -40, -42), (-6, -40, -44), (26, -61, 56),    (18, -54, 65), (27, -49, 56), (-20, -62, 54), (-20, -61, -26),    (-15, -67, -30), (-15, -73, -36), (21, -61, -26), (28, -52, -31),    (42, -8, 40), (34, -2, 44), (18, -24, 60), (21, 2, 53),    (12, 8, 50), (28, 23, 11), (28, 32, 5), (20, 53, -7),    (-51, 5, -10), (-48, -6, -12), (-32, -1, 46), (56, -18, 0),    (15, -8, 14), (12, -18, 8), (18, 0, 18), (-16, 17, 38),    (-10, 14, 46), (21, 12, 38)]
+# Example input MNI coordinates.
+# These are 3D coordinates representing specific locations in the brain, often used in neuroimaging studies.
+mni_coords = [(17, -12, -6), (33, -79, 13), (-25, -10, 48), (2, -42, -48), (34, 1, -14), (12, -90, 19), (-25, -92, 15), (-27, -15, 13), (-12, -96, 14), (13, -13, -6), (-19, -10, 44), (-13, -8, -12), (18, -14, -14), (38, -79, 20), (-18, -18, 42), (-6, -43, -46), (-19, -51, 15), (16, -84, 19), (-18, -78, 29), (41, 5, -23), (-23, -18, 13), (-17, -18, 43), (15, -8, -6), (-13, -14, -11), (-26, -3, 33), (11, -92, 15), (-7, -97, 10), (-29, -29, -1), (24, -35, 6), (1, -45, -45), (-22, -62, -30), (16, -4, 50), (22, -59, -21), (28, 29, 7), (-4, -95, 12), (16, -86, 8), (5, -39, -45), (25, -61, 59), (-26, -27, 5), (-17, -59, -23), (23, -62, -35), (-16, 12, 37), (20, -25, -1), (11, 21, 39), (28, 3, 41), (19, 0, 49), (20, -4, 16), (59, -21, 4), (24, 19, 16), (-34, -5, 42), (27, 30, 4), (9, -92, 12), (-8, -99, 10), (-21, -28, 0), (6, -37, -44), (27, -56, 57), (-19, -57, 51), (-23, -62, -29), (17, -64, -23), (41, -9, 39), (13, -23, 58), (20, 4, 51), (33, 19, 9), (-55, 10, -5), (-34, 4, 45), (57, -23, -1), (14, -13, 11), (-14, 22, 34), (17, 14, 43)]
 
 
-# Process the coordinates and identify regions
+# Process the MNI coordinates and identify regions with distances and vectors.
 results = process_coordinates(mni_coords, atlas_data, lut)
 
-# Write the results to a CSV file
+# Write the processed results to a CSV file.
 write_to_csv(results)
 
+# Print a message indicating that the results have been written to a file.
 print("Results written to output.csv")
