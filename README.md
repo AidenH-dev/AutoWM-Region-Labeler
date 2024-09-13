@@ -71,6 +71,9 @@ This script generates a fully interactive 3D model of white matter tracts using 
 - Creates an interactive Plotly-based 3D visualization.
 - Includes a Dash web application with a region selector for exploring specific tracts in the model.
 
+<img width="1379" alt="image" src="https://github.com/user-attachments/assets/7edb15aa-e4b0-4b33-8866-99cd81d168b9">
+
+
 ## Usage
 
 ### 1. `jhu_3d+.py`
