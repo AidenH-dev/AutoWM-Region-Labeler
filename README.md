@@ -8,142 +8,107 @@ Automate the region labeling for characterizing and comparing brain activations 
 
 ## Overview
 
-This script provides tools for identifying and analyzing white matter regions in the brain using the JHU White Matter Atlas. The script loads the JHU White Matter Atlas, defines a Look-Up Table (LUT) mapping atlas labels to anatomical names, and provides functions for identifying specific white matter regions based on voxel coordinates. Additionally, the script can check whether a cluster of points belongs to the same white matter region and visualize the results in 3D.
+This project provides a set of tools for identifying, visualizing, and analyzing white matter regions in the brain using the JHU White Matter Atlas. The tools range from simple region identification to more complex visualization of white matter tracts and 3D modeling. The project includes three main scripts:
+
+1. **`jhu_3d+.py`**: Generates 3D visualizations of white matter regions with MNI coordinates and vector plots.
+2. **`jhu_R+DV.py`**: Identifies the closest white matter regions to specific coordinates and calculates distances and vectors between them.
+3. **`jhu_tract_modeler.py`**: Creates an interactive 3D model of white matter regions using a web interface powered by Plotly and Dash.
 
 ## Prerequisites
 
-Before running the script, ensure you have the following Python packages installed:
+Ensure you have the following Python packages installed:
 
 - `nibabel`: For loading neuroimaging data in NIfTI format.
 - `numpy`: For numerical operations.
 - `scipy`: For spatial distance calculations.
-- `matplotlib`: For generating visualizations.
+- `matplotlib` and `plotly`: For generating visualizations.
+- `skimage`: For creating 3D meshes from volumetric data.
+- `dash`: For building an interactive web application for visualizing white matter tracts.
 
 You can install these packages using pip:
 
 ```bash
-pip install nibabel numpy scipy matplotlib
+pip install nibabel numpy scipy matplotlib plotly scikit-image dash
 ```
 
 ## Files
 
 - `JHU-WhiteMatter-labels-1mm.nii.gz`: The NIfTI file containing the JHU White Matter Atlas.
-- `jhu_atlas_lookup_cluster.py`: The main script that includes examples and visualizations.
+- `JHU-WhiteMatter-labels-2mm.nii.gz`: A downsampled version of the JHU White Matter Atlas.
+- `jhu_3d+.py`: Script for advanced 3D visualization.
+- `jhu_R+DV.py`: Script for region and distance/vector calculation.
+- `jhu_tract_modeler.py`: Script for interactive 3D tract modeling.
+
+## Scripts Overview
+
+### 1. `jhu_3d+.py`
+
+This script provides advanced 3D visualization of white matter regions in the brain. It integrates MNI coordinate processing, vector plotting, and region identification.
+
+**Key Features:**
+- Loads the JHU White Matter Atlas and extracts regions.
+- Converts MNI coordinates to MRIcron space.
+- Identifies the white matter regions closest to given voxel coordinates.
+- Generates a 3D plot with MNI coordinates and vector plots showing proximity to nearby regions.
+
+### 2. `jhu_R+DV.py`
+
+This script processes MNI coordinates, shifts them into MRIcron space, and identifies the closest white matter regions for each point. It calculates the Euclidean distances and vectors to the three nearest regions for further analysis.
+
+**Key Features:**
+- Shifts MNI coordinates for atlas alignment.
+- Identifies the closest regions for each coordinate.
+- Outputs results to a CSV file with regions, distances, and vectors.
+- Includes a formatted CSV output with each voxel's 3 closest regions.
+
+### 3. `jhu_tract_modeler.py`
+
+This script generates a fully interactive 3D model of white matter tracts using Plotly and Dash. It allows the user to interact with the model through a web-based interface and select specific white matter regions for visualization.
+
+**Key Features:**
+- Loads the JHU White Matter Atlas and extracts relevant regions.
+- Generates 3D meshes using marching cubes to create tract models.
+- Creates an interactive Plotly-based 3D visualization.
+- Includes a Dash web application with a region selector for exploring specific tracts in the model.
 
 ## Usage
 
-### 1. Load the JHU White Matter Atlas
+### 1. `jhu_3d+.py`
 
-The script begins by loading the JHU White Matter Atlas using the `nibabel` library:
-
-```python
-import nibabel as nib
-
-atlas_img = nib.load('../AutoWM-Region-Labeler/JHU_atlas/JHU-WhiteMatter-labels-1mm.nii.gz')
-atlas_data = atlas_img.get_fdata()
-```
-
-### 2. Define the Look-Up Table (LUT)
-
-The LUT is manually created to map the atlas labels to corresponding anatomical names:
-
-```python
-lut = {
-    0: "Unclassified",
-    1: "Middle_cerebellar_peduncle",
-    ...
-    98: "Region_X",
-    99: "Region_Y"
-}
-```
-
-### 3. Identify a White Matter Region
-
-To identify the white matter region corresponding to specific voxel coordinates, use the `identify_region` function:
-
-```python
-def identify_region(voxel_coords, atlas_data, lut):
-    # Function implementation
-```
-
-Example usage:
-
-```python
-region_name = identify_region((69, 161, 73), atlas_data, lut)
-print(region_name)
-```
-
-### 4. Check Cluster Regions
-
-To check whether a cluster of points belongs to the same white matter region, use the `check_cluster_region` function:
-
-```python
-def check_cluster_region(cluster_coords, atlas_data, lut, distance_threshold=5):
-    # Function implementation
-```
-
-Example usage:
-
-```python
-cluster_coords = [(69, 161, 73), (70, 161, 74), (68, 160, 72)]
-cluster_regions, all_same_region = check_cluster_region(cluster_coords, atlas_data, lut)
-print("Cluster Regions:", cluster_regions)
-print("All Points in Same Region:", all_same_region)
-```
-
-### 5. Visualize Cluster Regions
-
-The script includes a function to visualize the identified regions in 3D:
-
-```python
-def plot_cluster_regions(cluster_coords, cluster_regions, lut):
-    # Function implementation
-```
-
-Example usage:
-
-```python
-plot_cluster_regions(cluster_coords, cluster_regions, lut)
-```
-
-### 6. Example
-
-An example is provided at the end of the script that demonstrates how to use the `identify_region`, `check_cluster_region`, and `plot_cluster_regions` functions with a sample cluster of MNI coordinates.
+This script loads the JHU White Matter Atlas, processes MNI coordinates, and generates a 3D plot. Example usage:
 
 ```bash
-python3 jhu_atlas_lookup_cluster.py
+python jhu_3d+.py
 ```
+
+### 2. `jhu_R+DV.py`
+
+This script processes MNI coordinates and outputs the results in CSV format. Example usage:
+
+```bash
+python jhu_R+DV.py
+```
+
+### 3. `jhu_tract_modeler.py`
+
+This script launches a Dash web application for visualizing white matter tracts interactively. Example usage:
+
+```bash
+python jhu_tract_modeler.py
+```
+
+After running, visit the local server in your browser to explore the interactive 3D model.
 
 ## Output
 
-- **Cluster Regions**: A dictionary mapping each identified region to the number of points in that region.
-
-```bash
-> Cluster Regions: {'Anterior_corona_radiata_R': 10, 'Unclassified': 49, 'Genu_of_corpus_callosum': 1}
-```
-
-- **All Points in Same Region**: A boolean indicating whether all points in the cluster belong to the same region.
-
-```bash
-> All Points in Same Region: False
-```
-
-- **3D Visualization**: A 3D scatter plot showing the distribution of points in the cluster, color-coded by region.
-
-<div align="center">
-  <img width="727" alt="example_3d_plot" src="https://github.com/user-attachments/assets/76e7a2f4-c60d-4053-b3d6-6b3183868ea6">
-</div>
-
-
-## Notes
-
-- Ensure that the voxel coordinates passed to the functions are within the bounds of the atlas data.
-- Adjust the `distance_threshold` parameter in the `check_cluster_region` function to modify the sensitivity of cluster region checks.
-
+- **CSV File**: For `jhu_R+DV.py`, the results are written to a CSV file, which includes the input coordinates, identified regions, and vectors.
+- **3D Visualization**: For `jhu_3d+.py` and `jhu_tract_modeler.py`, the scripts generate interactive 3D models and visualizations.
+  
 ## License
 
-This script is open-source and available for use under the [MIT License](LICENSE).
+This project is open-source and available for use under the [MIT License](LICENSE).
 
 ## Contributing
 
-Contributions are welcome! If you have any improvements or suggestions, feel free to open an issue or submit a pull request.
+Contributions are welcome! Feel free to open an issue or submit a pull request with any improvements or suggestions.
+---

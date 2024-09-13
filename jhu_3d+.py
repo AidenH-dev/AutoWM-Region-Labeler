@@ -151,10 +151,10 @@ def main():
     shifted_coordinates = shift_coordinates(mni_coords)
 
     # Load all regions
-    all_regions_data, region_colors, atlas_data = load_all_regions(atlas_path, downsample_factor=1)
+    all_regions_data, region_colors, atlas_data = load_all_regions(atlas_path, downsample_factor=5)
 
     # Create the combined plot with vectors
-    create_combined_3d_plot_with_vectors(all_regions_data, region_colors, shifted_coordinates, vectors, atlas_data, downsample_factor=1)
+    create_combined_3d_plot_with_vectors(all_regions_data, region_colors, shifted_coordinates, vectors, atlas_data, downsample_factor=5)
 
 if __name__ == "__main__":
     main()

@@ -59,6 +59,23 @@ lut = {
     48: "Tapetum_L"
 }
 
+# Pre Step 1: Prep MNI coords to read as MRIcron Coordinates
+def shift_coordinates(coords, shift_values=(92, 127, 73)):
+    """
+    This function takes a list of tuples (coordinates) and applies a shift to each coordinate.
+    
+    Parameters:
+    coords (list of tuples): List of (x, y, z) coordinates
+    shift_values (tuple): The shift to apply to each coordinate, default is (x+92, y+127, z+73)
+    
+    Returns:
+    list of tuples: Shifted coordinates
+    """
+    shift = np.array(shift_values)
+    shifted_coords = [tuple(np.array(coord) + shift) for coord in coords]
+    return shifted_coords
+
+
 # Step 1: Load and extract only the regions that contain MNI coordinates, with optional downsampling
 def load_relevant_regions(file_path, relevant_region_ids, downsample_factor=2):
     nii = nib.load(file_path)
@@ -84,7 +101,7 @@ def load_relevant_regions(file_path, relevant_region_ids, downsample_factor=2):
 
     return selected_regions_data, selected_colors, nii_data
 
-# Step 2: Identify the white matter region corresponding to MNI coordinates
+# Step 2: Identify the white matter region corresponding to the coordinates
 def identify_region(voxel_coords, atlas_data, lut):
     label_value = int(atlas_data[tuple(voxel_coords)])
     return lut.get(label_value, "Unclassified"), label_value
@@ -107,8 +124,15 @@ def create_combined_3d_plot(relevant_regions_data, region_colors, mni_coords, at
 
     for coord in mni_coords:
         region_name, region_idx = identify_region(coord, atlas_data, lut)
+        # Calculate the downsampled coordinates for display
+        downsampled_coord = [coord[i] // downsample_factor for i in range(3)]
+        
         # Plot all MNI coordinates, including "Unclassified"
-        ax.scatter(coord[0]//downsample_factor, coord[1]//downsample_factor, coord[2]//downsample_factor, color=region_colors.get(region_idx, 'red'), s=50)
+        ax.scatter(*downsampled_coord, color=region_colors.get(region_idx, 'red'), s=50)
+        
+        # Label each point with its downsampled coordinates (as they appear in the graph)
+        ax.text(downsampled_coord[0], downsampled_coord[1], downsampled_coord[2],
+                f'({downsampled_coord[0]}, {downsampled_coord[1]}, {downsampled_coord[2]})', color='black', fontsize=8)
 
     # Set labels and axis limits
     ax.set_xlim(0, atlas_data.shape[0] // downsample_factor)
@@ -137,18 +161,23 @@ def generate_tracts_table(relevant_region_ids, lut):
 # Main function
 def main():
     file_path = '../AutoWM-Region-Labeler/JHU_atlas/JHU-WhiteMatter-labels-1mm.nii.gz'  # Update with your local path
-    downsample_factor = 2  # Downsampling factor to reduce memory usage and complexity
+    downsample_factor = 1  # Downsampling factor to reduce memory usage and complexity
 
     # Example MNI coordinates (replace with actual MNI coordinates)
-    mni_coords = [(107, 89, 37), (2, -6, 6)]  # Add actual MNI points
+    mni_coords = [(17, -12, -6), (33, -79, 13), (-25, -10, 48), (2, -42, -48), (34, 1, -14), (12, -90, 19), (-25, -92, 15), (-27, -15, 13), (-12, -96, 14), (13, -13, -6), (-19, -10, 44), (-13, -8, -12), (18, -14, -14), (38, -79, 20), (-18, -18, 42), (-6, -43, -46), (-19, -51, 15), (16, -84, 19), (-18, -78, 29), (41, 5, -23), (-23, -18, 13), (-17, -18, 43), (15, -8, -6), (-13, -14, -11), (-26, -3, 33), (11, -92, 15), (-7, -97, 10), (-29, -29, -1), (24, -35, 6), (1, -45, -45), (-22, -62, -30), (16, -4, 50), (22, -59, -21), (28, 29, 7), (-4, -95, 12), (16, -86, 8), (5, -39, -45), (25, -61, 59), (-26, -27, 5), (-17, -59, -23), (23, -62, -35), (-16, 12, 37), (20, -25, -1), (11, 21, 39), (28, 3, 41), (19, 0, 49), (20, -4, 16), (59, -21, 4), (24, 19, 16), (-34, -5, 42), (27, 30, 4), (9, -92, 12), (-8, -99, 10), (-21, -28, 0), (6, -37, -44), (27, -56, 57), (-19, -57, 51), (-23, -62, -29), (17, -64, -23), (41, -9, 39), (13, -23, 58), (20, 4, 51), (33, 19, 9), (-55, 10, -5), (-34, 4, 45), (57, -23, -1), (14, -13, 11), (-14, 22, 34), (17, 14, 43)]
+
+
+
+    # Processing MNI coordinates to MRIcron coordinates 
+    shifted_coordinates = shift_coordinates(mni_coords)
 
     # Load the atlas data for region identification
     atlas_img = nib.load(file_path)
-    atlas_data = atlas_img.get_fdata()
+    atlas_data = atlas_img.get_fdata() 
 
     # Find unique regions corresponding to the MNI coordinates
     relevant_region_ids = set()
-    for coord in mni_coords:
+    for coord in shifted_coordinates:
         _, region_id = identify_region(coord, atlas_data, lut)
         relevant_region_ids.add(region_id)
 
@@ -156,10 +185,11 @@ def main():
     relevant_regions_data, region_colors, _ = load_relevant_regions(file_path, relevant_region_ids, downsample_factor=downsample_factor)
 
     # Create the combined plot (plotting MNI coordinates including "Unclassified" but skipping 3D model generation for "Unclassified")
-    create_combined_3d_plot(relevant_regions_data, region_colors, mni_coords, atlas_data, relevant_region_ids, downsample_factor)
+    create_combined_3d_plot(relevant_regions_data, region_colors, shifted_coordinates, atlas_data, relevant_region_ids, downsample_factor)
 
     # Generate and display the table of modeled tracts (excluding "Unclassified")
     generate_tracts_table(relevant_region_ids, lut)
 
 if __name__ == "__main__":
     main()
+

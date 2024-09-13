@@ -19,6 +19,7 @@
 # This implementation uses the JHU White Matter Atlas for region identification and assumes the atlas is pre-loaded with 
 # voxel data. It also assumes that the input coordinates are valid MNI coordinates. The output CSV file can be used for 
 # further analysis or reporting.
+
 import nibabel as nib  # Importing the nibabel library, which is used for reading and working with neuroimaging data (e.g., NIfTI files).
 import numpy as np  # Importing NumPy for numerical operations, such as working with arrays.
 import csv  # Importing the CSV module to write the results to a CSV file.
@@ -26,7 +27,7 @@ import csv  # Importing the CSV module to write the results to a CSV file.
 # Load the JHU White Matter Atlas NIfTI file.
 # This file contains labeled regions of white matter in the brain, stored as a 3D image.
 # Each voxel in the 3D image has an integer label that corresponds to a specific white matter region.
-atlas_img = nib.load('../AutoWM-Region-Labeler/JHU_atlas/JHU-WhiteMatter-labels-1mm.nii.gz')
+atlas_img = nib.load('../AutoWM-Region-Labeler/JHU_atlas/JHU-WhiteMatter-labels-2mm.nii.gz')
 
 # Extract the actual image data from the loaded NIfTI file.
 # This data is stored as a NumPy array, where each element in the array represents a voxel in the brain.
@@ -93,10 +94,12 @@ lut = {
 # MNI coordinates typically need to be shifted to match the coordinate system used by the atlas.
 # The shift_values parameter represents the amount by which the MNI coordinates should be shifted.
 # The function applies this shift to each coordinate.
-def shift_coordinates(coords, shift_values=(92, 127, 73)):
+def shift_coordinates(coords, shift_values=(46, 64, 37)):
     shift = np.array(shift_values)  # Convert the shift values into a NumPy array.
-    shifted_coords = [tuple(np.array(coord) + shift) for coord in coords]  # Apply the shift to each coordinate.
+    # Apply the shift, divide by 1.3333333, and round the result
+    shifted_coords = [tuple(np.round((np.array(coord) + shift) / 1.3333333).astype(int)) for coord in coords]
     return shifted_coords
+
 
 # Function to identify the region corresponding to the given voxel coordinates.
 # The function looks up the voxel value in the atlas (i.e., the white matter region label).
@@ -212,8 +215,20 @@ def write_to_csv(results, output_filename='output.csv'):
 
 # Example input MNI coordinates.
 # These are 3D coordinates representing specific locations in the brain, often used in neuroimaging studies.
-mni_coords = [(17, -12, -6), (33, -79, 13), (-25, -10, 48), (2, -42, -48), (34, 1, -14), (12, -90, 19), (-25, -92, 15), (-27, -15, 13), (-12, -96, 14), (13, -13, -6), (-19, -10, 44), (-13, -8, -12), (18, -14, -14), (38, -79, 20), (-18, -18, 42), (-6, -43, -46), (-19, -51, 15), (16, -84, 19), (-18, -78, 29), (41, 5, -23), (-23, -18, 13), (-17, -18, 43), (15, -8, -6), (-13, -14, -11), (-26, -3, 33), (11, -92, 15), (-7, -97, 10), (-29, -29, -1), (24, -35, 6), (1, -45, -45), (-22, -62, -30), (16, -4, 50), (22, -59, -21), (28, 29, 7), (-4, -95, 12), (16, -86, 8), (5, -39, -45), (25, -61, 59), (-26, -27, 5), (-17, -59, -23), (23, -62, -35), (-16, 12, 37), (20, -25, -1), (11, 21, 39), (28, 3, 41), (19, 0, 49), (20, -4, 16), (59, -21, 4), (24, 19, 16), (-34, -5, 42), (27, 30, 4), (9, -92, 12), (-8, -99, 10), (-21, -28, 0), (6, -37, -44), (27, -56, 57), (-19, -57, 51), (-23, -62, -29), (17, -64, -23), (41, -9, 39), (13, -23, 58), (20, 4, 51), (33, 19, 9), (-55, 10, -5), (-34, 4, 45), (57, -23, -1), (14, -13, 11), (-14, 22, 34), (17, 14, 43)]
-
+mni_coords = [(14, -10, -10), (34, -76, 17), (-21, -13, 47), (-2, -40, -43), (38, 0, -18),
+ (14, -88, 20), (-26, -88, 16), (-22, -20, 11), (-10, -92, 10), (14, -8, -10),
+ (-21, -13, 47), (-14, -13, -10), (14, -10, -10), (34, -76, 17), (-21, -13, 47),
+ (-2, -40, -43), (-16, -52, 16), (14, -88, 22), (-22, -76, 32), (38, 0, -18),
+ (-22, -20, 11), (-21, -13, 47), (14, -10, -10), (-14, -13, -10), (-28, 2, 36),
+ (12, -91, 11), (-8, -94, 12), (-24, -31, 2), (22, -30, 2), (2, -40, -42),
+ (-20, -60, -26), (20, -2, 54), (21, -61, -26), (30, 30, 6), (-6, -94, 11),
+ (12, -91, 11), (2, -40, -40), (24, -62, 56), (-24, -32, 4), (-16, -61, -25),
+ (24, -60, -30), (-15, 16, 38), (24, -30, 0), (15, 16, 38), (32, -2, 46),
+ (21, 4, 53), (18, 0, 18), (56, -18, 0), (28, 23, 11), (-32, -1, 46),
+ (26, 29, 0), (12, -91, 11), (-6, -94, 11), (-24, -32, 2), (2, -40, -42),
+ (26, -61, 56), (-20, -62, 54), (-20, -61, -26), (21, -61, -26), (42, -8, 40),
+ (18, -24, 60), (21, 2, 53), (28, 23, 11), (-51, 5, -10), (-32, -1, 46),
+ (56, -18, 0), (15, -8, 14), (-16, 17, 38), (21, 12, 38)]
 
 # Process the MNI coordinates and identify regions with distances and vectors.
 results = process_coordinates(mni_coords, atlas_data, lut)
