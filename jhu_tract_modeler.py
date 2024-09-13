@@ -115,7 +115,6 @@ def create_3d_plot(all_regions_data, all_colors, all_region_names):
 
     fig.update_layout(scene=dict(aspectmode="data"))
     return fig
-
 # Step 4: Create the Dash app
 def create_dash_app(all_region_names, fig):
     app = Dash(__name__)
@@ -123,17 +122,28 @@ def create_dash_app(all_region_names, fig):
     # Define the layout of the app
     app.layout = html.Div([
         html.H1("Interactive Brain Region Visualization"),
-        dash_table.DataTable(
-            id='region-table',
-            columns=[{'name': 'Region', 'id': 'Region'}],
-            data=[{'Region': region} for region in all_region_names],
-            row_selectable='single',
-            style_cell={'textAlign': 'left'},
-        ),
-        dcc.Graph(
-            id='3d-graph',
-            figure=fig
-        )
+        html.Div([
+            # Left side: table
+            html.Div([
+                dash_table.DataTable(
+                    id='region-table',
+                    columns=[{'name': 'Region', 'id': 'Region'}],
+                    data=[{'Region': region} for region in all_region_names],
+                    row_selectable='single',
+                    style_cell={'textAlign': 'left'},
+                    style_table={'height': '90vh', 'overflowY': 'auto'},  # Adjust table to fit the screen height
+                )
+            ], style={'width': '30%', 'display': 'inline-block', 'vertical-align': 'top'}),
+            
+            # Right side: 3D model viewer
+            html.Div([
+                dcc.Graph(
+                    id='3d-graph',
+                    figure=fig,
+                    style={'height': '90vh'}  # Adjust model viewer to fit the screen height
+                )
+            ], style={'width': '70%', 'display': 'inline-block'})
+        ], style={'display': 'flex', 'height': '100vh'})  # Flexbox layout to align side by side
     ])
 
     # Define the callback for updating the 3D plot
