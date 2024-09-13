@@ -28,7 +28,7 @@ Ensure you have the following Python packages installed:
 You can install these packages using pip:
 
 ```bash
-pip install nibabel numpy scipy matplotlib plotly scikit-image dash
+pip3 install nibabel numpy scipy matplotlib plotly scikit-image dash
 ```
 
 ## Files
@@ -78,7 +78,7 @@ This script generates a fully interactive 3D model of white matter tracts using 
 This script loads the JHU White Matter Atlas, processes MNI coordinates, and generates a 3D plot. Example usage:
 
 ```bash
-python jhu_3d+.py
+python3 jhu_3d+.py
 ```
 
 ### 2. `jhu_R+DV.py`
@@ -86,7 +86,7 @@ python jhu_3d+.py
 This script processes MNI coordinates and outputs the results in CSV format. Example usage:
 
 ```bash
-python jhu_R+DV.py
+python3 jhu_R+DV.py
 ```
 
 ### 3. `jhu_tract_modeler.py`
@@ -94,7 +94,7 @@ python jhu_R+DV.py
 This script launches a Dash web application for visualizing white matter tracts interactively. Example usage:
 
 ```bash
-python jhu_tract_modeler.py
+python3 jhu_tract_modeler.py
 ```
 
 After running, visit the local server in your browser to explore the interactive 3D model.
