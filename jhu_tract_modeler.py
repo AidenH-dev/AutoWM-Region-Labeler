@@ -121,7 +121,7 @@ def create_dash_app(all_region_names, fig):
 
     # Define the layout of the app
     app.layout = html.Div([
-        html.H1("Interactive Brain Region Visualization"),
+        html.H1("Interactive White Matter Tract Visualization"),
         html.Div([
             # Left side: table
             html.Div([
