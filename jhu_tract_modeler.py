@@ -1,8 +1,9 @@
 import nibabel as nib
 import numpy as np
 from skimage import measure
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+import plotly.graph_objects as go
+from dash import Dash, dash_table, html, dcc
+from dash.dependencies import Input, Output
 import random
 
 # Look-up table (LUT) for white matter regions, including "Unclassified" (which will be skipped)
@@ -65,6 +66,7 @@ def load_and_extract_regions(file_path):
 
     all_regions_data = []
     all_colors = []
+    all_region_names = []
 
     for region_idx, region_name in lut.items():
         if region_idx == 0:  # Skip "Unclassified"
@@ -77,54 +79,92 @@ def load_and_extract_regions(file_path):
         # If the region is present, add it to the list
         if np.any(region_data):
             all_regions_data.append(region_data)
+            all_region_names.append(region_name)
 
             # Assign random color to the region
             color = (random.random(), random.random(), random.random())
             all_colors.append(color)
 
-    return all_regions_data, all_colors
+    return all_regions_data, all_colors, all_region_names
 
-# Step 2: Downsample the region data for performance optimization
-def downsample(data, factor=2):
-    """Downsample the 3D data to reduce complexity."""
-    return data[::factor, ::factor, ::factor]
+# Step 2: Use marching cubes to create a 3D mesh for each region
+def create_mesh_for_region(region_data):
+    verts, faces, normals, values = measure.marching_cubes(region_data, level=0.5)
+    x, y, z = verts.T
+    i, j, k = faces.T
+    return x, y, z, i, j, k
 
-# Step 3: Create 3D plot with all regions
-def create_combined_3d_plot(all_regions_data, all_colors):
-    fig = plt.figure(figsize=(10, 10))
-    ax = fig.add_subplot(111, projection='3d')
+# Step 3: Create Plotly 3D figure
+def create_3d_plot(all_regions_data, all_colors, all_region_names):
+    fig = go.Figure()
 
-    for i, region_data in enumerate(all_regions_data):
-        # Downsample the region data for performance improvement
-        region_data = downsample(region_data, factor=2)
+    for idx, region_data in enumerate(all_regions_data):
+        x, y, z, i, j, k = create_mesh_for_region(region_data)
 
-        # Use marching cubes to generate 3D surface for each region
-        verts, faces, normals, values = measure.marching_cubes(region_data, level=0.5)
+        # Ensure the color is properly converted to a float list
+        color_rgb = list(map(float, all_colors[idx]))
 
-        # Create a 3D mesh using the vertices and faces from marching cubes
-        mesh = Poly3DCollection(verts[faces], alpha=0.1, linewidths=0, edgecolors='none')  # Increased transparency and removed edge rendering
-        mesh.set_facecolor(all_colors[i])
+        # Add 3D surface for the region
+        fig.add_trace(go.Mesh3d(
+            x=x, y=y, z=z,
+            i=i, j=j, k=k,
+            color=f'rgb({color_rgb[0]*255},{color_rgb[1]*255},{color_rgb[2]*255})',
+            opacity=0.1,
+            name=all_region_names[idx]
+        ))
 
-        ax.add_collection3d(mesh)
+    fig.update_layout(scene=dict(aspectmode="data"))
+    return fig
 
-    # Set axis limits based on the first region's size
-    ax.set_xlim(0, verts[:, 0].max())
-    ax.set_ylim(0, verts[:, 1].max())
-    ax.set_zlim(0, verts[:, 2].max())
+# Step 4: Create the Dash app
+def create_dash_app(all_region_names, fig):
+    app = Dash(__name__)
 
-    # Set labels and view angle
-    ax.set_xlabel('X axis')
-    ax.set_ylabel('Y axis')
-    ax.set_zlabel('Z axis')
-    ax.view_init(elev=45, azim=45)
+    # Define the layout of the app
+    app.layout = html.Div([
+        html.H1("Interactive Brain Region Visualization"),
+        dash_table.DataTable(
+            id='region-table',
+            columns=[{'name': 'Region', 'id': 'Region'}],
+            data=[{'Region': region} for region in all_region_names],
+            row_selectable='single',
+            style_cell={'textAlign': 'left'},
+        ),
+        dcc.Graph(
+            id='3d-graph',
+            figure=fig
+        )
+    ])
 
-    plt.show()
+    # Define the callback for updating the 3D plot
+    @app.callback(
+        Output('3d-graph', 'figure'),
+        [Input('region-table', 'selected_rows')]
+    )
+    def update_3d_plot(selected_rows):
+        # Reset all opacities to default
+        for trace in fig['data']:
+            trace['opacity'] = 0.1
 
-# Main function to load regions and generate the 3D plot
+        if selected_rows:
+            selected_region_idx = selected_rows[0]
+            fig['data'][selected_region_idx]['opacity'] = 1.0  # Highlight the selected region
+
+        return fig
+
+    return app
+
+# Main function to load regions, create plot, and run the Dash app
 def main():
     file_path = '../AutoWM-Region-Labeler/JHU_atlas/JHU-WhiteMatter-labels-1mm.nii.gz'  # Update with your local path
-    all_regions_data, all_colors = load_and_extract_regions(file_path)
-    create_combined_3d_plot(all_regions_data, all_colors)
+    all_regions_data, all_colors, all_region_names = load_and_extract_regions(file_path)
+
+    # Create the 3D plot with Plotly
+    fig = create_3d_plot(all_regions_data, all_colors, all_region_names)
+
+    # Create and run the Dash app
+    app = create_dash_app(all_region_names, fig)
+    app.run_server(debug=True)
 
 if __name__ == "__main__":
     main()
