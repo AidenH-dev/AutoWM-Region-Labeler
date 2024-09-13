@@ -51,6 +51,9 @@ This script provides advanced 3D visualization of white matter regions in the br
 - Identifies the white matter regions closest to given voxel coordinates.
 - Generates a 3D plot with MNI coordinates and vector plots showing proximity to nearby regions.
 
+  ![image](https://github.com/user-attachments/assets/8644d71e-3581-4c7c-952e-7c4471f0c3a8)
+
+
 ### 2. `jhu_R+DV.py`
 
 This script processes MNI coordinates, shifts them into MRIcron space, and identifies the closest white matter regions for each point. It calculates the Euclidean distances and vectors to the three nearest regions for further analysis.
