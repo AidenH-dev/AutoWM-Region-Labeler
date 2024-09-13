@@ -110,11 +110,32 @@ def create_3d_plot(all_regions_data, all_colors, all_region_names):
             i=i, j=j, k=k,
             color=f'rgb({color_rgb[0]*255},{color_rgb[1]*255},{color_rgb[2]*255})',
             opacity=0.1,
-            name=all_region_names[idx]
+            name=all_region_names[idx],  # Name displayed in the legend
+            hovertemplate=(
+                'X: %{x}<br>'                     # Display X coordinate
+                'Y: %{y}<br>'                     # Display Y coordinate
+                'Z: %{z}<br>'                     # Display Z coordinate
+            ),
         ))
 
-    fig.update_layout(scene=dict(aspectmode="data"))
+    # Adjust the legend settings to give more space for long names
+    fig.update_layout(
+        scene=dict(aspectmode="data"),
+        margin=dict(l=0, r=0, b=0, t=50),
+        legend=dict(
+            x=1.05,  # Position legend outside the plot
+            y=1,
+            traceorder="normal",
+            font=dict(size=10),  # Adjust the font size if needed
+            itemwidth=100,  # Increase item width to give more space for names
+            bordercolor="Black",
+            borderwidth=1,
+        )
+    )
+
     return fig
+
+    
 # Step 4: Create the Dash app
 def create_dash_app(all_region_names, fig):
     app = Dash(__name__)
