@@ -94,11 +94,32 @@ lut = {
 # MNI coordinates typically need to be shifted to match the coordinate system used by the atlas.
 # The shift_values parameter represents the amount by which the MNI coordinates should be shifted.
 # The function applies this shift to each coordinate.
-def shift_coordinates(coords, shift_values=(46, 64, 37)):
-    shift = np.array(shift_values)  # Convert the shift values into a NumPy array.
-    # Apply the shift, divide by 1.3333333, and round the result
-    shifted_coords = [tuple(np.round((np.array(coord) + shift) / 1.3333333).astype(int)) for coord in coords]
-    return shifted_coords
+def mni_to_mricron(coords, mni_voxel_size=1.5):
+    """
+    Converts a list of MNI coordinates to MRIcron coordinates, handling different MNI voxel sizes
+    and adjusting the rounding method to match MRIcron's output.
+    
+    Parameters:
+        coords (list of tuples): List of MNI coordinates.
+        mni_voxel_size (float): Voxel size of the MNI coordinates.
+        
+    Returns:
+        list of tuples: List of MRIcron coordinates.
+    """
+    scaling_factor = 2.0 / mni_voxel_size  # Adjust for different voxel sizes
+    converted_coords = []
+    for coord in coords:
+        X, Y, Z = coord
+        # Scale MNI coordinates to 2mm space if needed
+        X_scaled = X * scaling_factor
+        Y_scaled = Y * scaling_factor
+        Z_scaled = Z * scaling_factor
+        # Apply the inverted transformation equations with corrected rounding
+        x = int(np.floor((X_scaled + 92) / 2))
+        y = int(np.floor((Y_scaled + 128 ) / 2))
+        z = int(np.ceil((Z_scaled + 74) / 2))
+        converted_coords.append((x, y, z))
+    return converted_coords
 
 
 # Function to identify the region corresponding to the given voxel coordinates.
@@ -127,7 +148,7 @@ def format_vector(vector):
 # For each input coordinate, the function shifts the coordinate to match the atlas space,
 # identifies the region it belongs to, and finds the 3 closest regions (if the input is unclassified).
 def process_coordinates(coords, atlas_data, lut):
-    shifted_coords = shift_coordinates(coords)  # First, shift the input coordinates.
+    shifted_coords = mni_to_mricron(coords)  # First, shift the input coordinates.
     results = []  # Initialize an empty list to store the results.
     
     # Get the shape of the atlas data to use for bounds checking.

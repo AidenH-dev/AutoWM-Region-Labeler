@@ -60,10 +60,32 @@ lut = {
 }
 
 # Pre Step 1: Prep MNI coords to read as MRIcron Coordinates
-def shift_coordinates(coords, shift_values=(92, 127, 73)):
-    shift = np.array(shift_values)
-    shifted_coords = [tuple(np.array(coord) + shift) for coord in coords]
-    return shifted_coords
+def mni_to_mricron(coords, mni_voxel_size=1.5):
+    """
+    Converts a list of MNI coordinates to MRIcron coordinates, handling different MNI voxel sizes
+    and adjusting the rounding method to match MRIcron's output.
+    
+    Parameters:
+        coords (list of tuples): List of MNI coordinates.
+        mni_voxel_size (float): Voxel size of the MNI coordinates.
+        
+    Returns:
+        list of tuples: List of MRIcron coordinates.
+    """
+    scaling_factor = 2.0 / mni_voxel_size  # Adjust for different voxel sizes
+    converted_coords = []
+    for coord in coords:
+        X, Y, Z = coord
+        # Scale MNI coordinates to 2mm space if needed
+        X_scaled = X * scaling_factor
+        Y_scaled = Y * scaling_factor
+        Z_scaled = Z * scaling_factor
+        # Apply the inverted transformation equations with corrected rounding
+        x = int(np.floor((X_scaled + 92) / 2))
+        y = int(np.floor((Y_scaled + 128 ) / 2))
+        z = int(np.ceil((Z_scaled + 74) / 2))
+        converted_coords.append((x, y, z))
+    return converted_coords
 
 # Step 1: Load and extract all regions
 def load_all_regions(file_path, downsample_factor=2):
@@ -134,7 +156,7 @@ def create_combined_3d_plot_with_vectors(all_regions_data, region_colors, mni_co
 # Main function
 def main():
     file_path = '../AutoWM-Region-Labeler/output.csv'  # Path to the CSV file
-    atlas_path = '../AutoWM-Region-Labeler/JHU_atlas/JHU-WhiteMatter-labels-1mm.nii.gz'  # Path to the NIfTI file
+    atlas_path = '../AutoWM-Region-Labeler/JHU_atlas/JHU-WhiteMatter-labels-2mm.nii.gz'  # Path to the NIfTI file
 
     # Load the data from the CSV
     data = pd.read_csv(file_path)
@@ -148,13 +170,13 @@ def main():
         vectors.append([eval(data.iloc[i]['region 1 vector']), eval(data.iloc[i]['region 2 vector']), eval(data.iloc[i]['region 3 vector'])])
 
     # Processing MNI coordinates to MRIcron coordinates 
-    shifted_coordinates = shift_coordinates(mni_coords)
+    shifted_coordinates = mni_to_mricron(mni_coords)
 
     # Load all regions
-    all_regions_data, region_colors, atlas_data = load_all_regions(atlas_path, downsample_factor=5)
+    all_regions_data, region_colors, atlas_data = load_all_regions(atlas_path, downsample_factor=1)
 
     # Create the combined plot with vectors
-    create_combined_3d_plot_with_vectors(all_regions_data, region_colors, shifted_coordinates, vectors, atlas_data, downsample_factor=5)
+    create_combined_3d_plot_with_vectors(all_regions_data, region_colors, shifted_coordinates, vectors, atlas_data, downsample_factor=1)
 
 if __name__ == "__main__":
     main()
