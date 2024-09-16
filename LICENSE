@@ -1,21 +1,31 @@
-MIT License
+Custom Non-Commercial and Academic Attribution License
 
 Copyright (c) 2024 Aiden Habboub
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any individual or organization obtaining a copy of this software and associated documentation files (the "Software"), to use, copy, modify, and distribute the Software, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. **Non-Commercial Use Only**:  
+   - The Software may only be used for personal, educational, or academic purposes.  
+   - Commercial use, including any activity intended to generate monetary profit or commercial advantage, is expressly prohibited unless a separate, written agreement is made with the copyright holder.  
+   - For commercial inquiries or to obtain a commercial license, please contact [Your Email Address].
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+2. **Academic Use and Attribution**:  
+   - The Software may be used in academic research or educational projects.  
+   - Any academic or research work that uses the Software must properly attribute the author(s) and include a citation to the original project.  
+   - The Software may not be used to obtain academic credit or recognition without explicitly acknowledging the original author(s) and project. Failure to provide proper attribution or credit when required will be considered a violation of this license.
+
+3. **Prohibition of Profit**:  
+   - The Software may not be sold, rented, or used in any form of profit-making activity without a written agreement from the copyright holder. This includes but is not limited to incorporating the Software into products or services that are sold or offered commercially.
+
+4. **Modification and Redistribution**:  
+   - Individuals and organizations are allowed to modify and redistribute the Software under the same terms of this license, provided that the Software and any modifications are not used for commercial purposes.  
+   - Any modifications must include a clear statement indicating that changes were made and must not misrepresent the original work as the modifier’s creation.
+
+5. **No Warranty**:  
+   - The Software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and non-infringement.  
+   - In no event shall the authors be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the Software or the use or other dealings in the Software.
+
+6. **Termination**:  
+   - Any violation of the terms in this license will result in the immediate termination of the rights granted under this license.  
+
+For commercial use or inquiries regarding different licensing options, please contact aiden.habboub@gmail.com.
