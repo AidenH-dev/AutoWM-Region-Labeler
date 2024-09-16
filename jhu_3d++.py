@@ -1,12 +1,19 @@
+## MEANT TO BE UPDATED VERSION OF jhu_3d+.py by using plotly and dash app to offload computations to the GPU for better modeling performance and interactibility
 import nibabel as nib
 import numpy as np
 from skimage import measure
 import plotly.graph_objects as go
 from dash import Dash, dash_table, html, dcc
 from dash.dependencies import Input, Output
+import pandas as pd
 import random
+import ast
+import logging
 
-# Look-up table (LUT) for white matter regions, including "Unclassified" (which will be skipped)
+# Setup logging for debugging
+logging.basicConfig(level=logging.DEBUG)
+
+# Look-up table (LUT) for white matter regions, including "Unclassified"
 lut = {
     0: "Unclassified",
     1: "Middle_cerebellar_peduncle",
@@ -59,7 +66,24 @@ lut = {
     48: "Tapetum_L"
 }
 
-# Step 1: Load the NIfTI file and extract regions, skipping "Unclassified"
+# Pre Step 1: Convert MNI coordinates to MRIcron coordinates
+def mni_to_mricron(coords, mni_voxel_size=2):
+    scaling_factor = 2.0 / mni_voxel_size  # Adjust for voxel sizes
+    converted_coords = []
+    for coord in coords:
+        X, Y, Z = coord
+        X_scaled = X * scaling_factor
+        Y_scaled = Y * scaling_factor
+        Z_scaled = Z * scaling_factor
+        x = int(np.floor((X_scaled + 92) / 2))
+        y = int(np.floor((Y_scaled + 128) / 2))
+        z = int(np.ceil((Z_scaled + 74) / 2))
+        converted_coords.append((x, y, z))
+    return converted_coords
+
+
+
+# Step 1: Load and extract all regions
 def load_and_extract_regions(file_path):
     nii = nib.load(file_path)
     nii_data = nii.get_fdata()
@@ -71,80 +95,99 @@ def load_and_extract_regions(file_path):
     for region_idx, region_name in lut.items():
         if region_idx == 0:  # Skip "Unclassified"
             continue
-        
-        # Extract region
+
         region_data = np.zeros_like(nii_data)
         region_data[nii_data == region_idx] = 1
 
-        # If the region is present, add it to the list
         if np.any(region_data):
             all_regions_data.append(region_data)
             all_region_names.append(region_name)
-
-            # Assign random color to the region
             color = (random.random(), random.random(), random.random())
             all_colors.append(color)
 
-    return all_regions_data, all_colors, all_region_names
+    return all_regions_data, all_colors, all_region_names, nii_data
 
-# Step 2: Use marching cubes to create a 3D mesh for each region
+# Step 2: Identify the region based on voxel coordinates
+def identify_region(voxel_coords, atlas_data):
+    label_value = int(atlas_data[tuple(voxel_coords)])
+    return lut.get(label_value, "Unclassified"), label_value
+
+# Step 3: Create a 3D mesh for the region using marching cubes
 def create_mesh_for_region(region_data):
     verts, faces, normals, values = measure.marching_cubes(region_data, level=0.5)
-    x, y, z = verts.T
-    i, j, k = faces.T
+    x, y, z = verts.T  # Extract vertices
+    i, j, k = faces.T  # Extract faces
     return x, y, z, i, j, k
 
-# Step 3: Create Plotly 3D figure
-def create_3d_plot(all_regions_data, all_colors, all_region_names):
+# Step 4: Create 3D plot with regions and vectors
+def create_3d_plot_with_vectors(all_regions_data, all_colors, all_region_names, mni_coords, vectors, atlas_data):
     fig = go.Figure()
 
+    # Plot each white matter region
     for idx, region_data in enumerate(all_regions_data):
         x, y, z, i, j, k = create_mesh_for_region(region_data)
-
-        # Ensure the color is properly converted to a float list
         color_rgb = list(map(float, all_colors[idx]))
 
-        # Add 3D surface for the region
         fig.add_trace(go.Mesh3d(
             x=x, y=y, z=z,
             i=i, j=j, k=k,
             color=f'rgb({color_rgb[0]*255},{color_rgb[1]*255},{color_rgb[2]*255})',
             opacity=0.1,
-            name=all_region_names[idx],  # Name displayed in the legend
-            hovertemplate=(
-                'X: %{x}<br>'                     # Display X coordinate
-                'Y: %{y}<br>'                     # Display Y coordinate
-                'Z: %{z}<br>'                     # Display Z coordinate
-            ),
+            name=all_region_names[idx]
         ))
 
-    # Adjust the legend settings to give more space for long names
+    # Plot MNI coordinates and vectors
+    for i, coord in enumerate(mni_coords):
+        region_name, region_idx = identify_region(coord, atlas_data)
+
+        # Log the coordinate for debugging
+        logging.debug(f"MNI Coord {i}: {coord}, Region: {region_name}")
+
+        # Plot MNI coordinate
+        fig.add_trace(go.Scatter3d(
+            x=[coord[0]], y=[coord[1]], z=[coord[2]],
+            mode='markers',
+            marker=dict(size=5, color='rgba(255, 0, 0, 1)'),  # Make the point more visible
+            name=f'MNI Coord {i} ({region_name})'
+        ))
+
+        # Plot vectors to the closest regions
+        for j, vec in enumerate(vectors[i]):
+            vector = np.array(vec)
+            if np.all(vector == 0):
+                logging.debug(f"Skipping zero vector for {coord}")
+                continue  # Skip zero vectors
+
+            # Calculate the endpoint of the vector
+            end_point = np.array(coord) + vector
+
+            fig.add_trace(go.Scatter3d(
+                x=[coord[0], end_point[0]],
+                y=[coord[1], end_point[1]],
+                z=[coord[2], end_point[2]],
+                mode='lines',
+                line=dict(color='green', width=5),
+                name=f'Vector {i}-{j}'
+            ))
+
     fig.update_layout(
         scene=dict(aspectmode="data"),
         margin=dict(l=0, r=0, b=0, t=50),
         legend=dict(
-            x=1.05,  # Position legend outside the plot
-            y=1,
-            traceorder="normal",
-            font=dict(size=10),  # Adjust the font size if needed
-            itemwidth=100,  # Increase item width to give more space for names
-            bordercolor="Black",
-            borderwidth=1,
+            x=1.05, y=1, traceorder="normal",
+            font=dict(size=5), itemwidth=30, bordercolor="Black", borderwidth=1
         )
     )
 
     return fig
 
-    
-# Step 4: Create the Dash app
+# Step 5: Create the Dash app
 def create_dash_app(all_region_names, fig):
     app = Dash(__name__)
 
-    # Define the layout of the app
     app.layout = html.Div([
-        html.H1("Interactive White Matter Tract JHU Atlas Model"),
+        html.H1("Interactive White Matter Tract Visualization"),
         html.Div([
-            # Left side: table
             html.Div([
                 dash_table.DataTable(
                     id='region-table',
@@ -152,46 +195,56 @@ def create_dash_app(all_region_names, fig):
                     data=[{'Region': region} for region in all_region_names],
                     row_selectable='single',
                     style_cell={'textAlign': 'left'},
-                    style_table={'height': '90vh', 'overflowY': 'auto'},  # Adjust table to fit the screen height
+                    style_table={'height': '90vh', 'overflowY': 'auto'}
                 )
             ], style={'width': '30%', 'display': 'inline-block', 'vertical-align': 'top'}),
-            
-            # Right side: 3D model viewer
             html.Div([
                 dcc.Graph(
                     id='3d-graph',
                     figure=fig,
-                    style={'height': '90vh'}  # Adjust model viewer to fit the screen height
+                    style={'height': '90vh'}
                 )
             ], style={'width': '70%', 'display': 'inline-block'})
-        ], style={'display': 'flex', 'height': '100vh'})  # Flexbox layout to align side by side
+        ], style={'display': 'flex', 'height': '100vh'})
     ])
 
-    # Define the callback for updating the 3D plot
     @app.callback(
         Output('3d-graph', 'figure'),
         [Input('region-table', 'selected_rows')]
     )
     def update_3d_plot(selected_rows):
-        # Reset all opacities to default
         for trace in fig['data']:
             trace['opacity'] = 0.1
 
         if selected_rows:
             selected_region_idx = selected_rows[0]
-            fig['data'][selected_region_idx]['opacity'] = 1.0  # Highlight the selected region
+            fig['data'][selected_region_idx]['opacity'] = 1.0
 
         return fig
 
     return app
 
-# Main function to load regions, create plot, and run the Dash app
+# Main function
 def main():
-    file_path = '../AutoWM-Region-Labeler/JHU_atlas/JHU-WhiteMatter-labels-1mm.nii.gz'  # Update with your local path
-    all_regions_data, all_colors, all_region_names = load_and_extract_regions(file_path)
+    # Load white matter regions
+    file_path = '../AutoWM-Region-Labeler/JHU_atlas/JHU-WhiteMatter-labels-2mm.nii.gz'
+    all_regions_data, all_colors, all_region_names, atlas_data = load_and_extract_regions(file_path)
 
-    # Create the 3D plot with Plotly
-    fig = create_3d_plot(all_regions_data, all_colors, all_region_names)
+    # Load CSV data for MNI coordinates and vectors
+    csv_file_path = '../AutoWM-Region-Labeler/output.csv'
+    data = pd.read_csv(csv_file_path)
+    mni_coords = data[['x', 'y', 'z']].values
+    vectors = [ 
+        [eval(data.iloc[i]['region 1 vector']), 
+        eval(data.iloc[i]['region 2 vector']), 
+        eval(data.iloc[i]['region 3 vector'])] 
+        for i in range(len(data))
+]
+    # Convert MNI coordinates to MRIcron coordinates
+    shifted_coordinates = mni_to_mricron(mni_coords)
+
+    # Create 3D Plotly figure with regions and vectors
+    fig = create_3d_plot_with_vectors(all_regions_data, all_colors, all_region_names, shifted_coordinates, vectors, atlas_data)
 
     # Create and run the Dash app
     app = create_dash_app(all_region_names, fig)
